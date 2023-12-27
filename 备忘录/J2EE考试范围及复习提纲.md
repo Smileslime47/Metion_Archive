@@ -23,10 +23,10 @@
 ## Mybatis基础课堂练习(1-3章) 
 1. [√]MyBatis框架是一种ORM框架，ORM框架即为对象关系映射框架。
 2. [x]MyBatis映射文件中<mappers>元素是配置文件的根元素，它包含一个namespace属性，该属性为这个<mappers>指定了唯一的命名空间。
-配置文件的根元素是<configuration>，映射文件的根元素是<mapper>
-namespace字段是<mapper>的属性而不是<mappers>的
+   - 配置文件的根元素是<configuration>，映射文件的根元素是<mapper>
+   - namespace字段是<mapper>的属性而不是<mappers>的
 3. [x]SqlSession实例也是线程安全的，可以将其放在一个类的静态字段、实例字段或任何类型的管理范围(如Servlet的HttpSession)中使用。
-SqlSession是线程不安全的，因此不能放在静态字段中
+   - SqlSession是线程不安全的，因此不能放在静态字段中
 4. [√]MyBatis动态SQL中的<choose> ( <when>.、<otherwise>)元素类似Java中的switch...case...default语句，用于进行多条件分支判断。
 5. 有关MyBatis工作原理说法错误的是
    - A.[√]MyBatis的全局配置文件配置了MyBatis的运行环境等信息，其中主要内容是获取数据库连接。
