@@ -87,7 +87,7 @@
   - 可以使用 resultType 或 resultMap，但不能同时使用。
   - resultTyoe是`<select>`的一个属性，即`<select resultType="...">`，而resultMap是`<select>`的一个子元素，即`<select><resultMap></resultMap></select>`(具体使用可以见下例)
   - resultType用于返回数据的字段和POJO类的名称严格一一对应时，指明返回数据的POJO类型，不需要多余的属性
-  - resultMap用于名称不严格一一对应时，还能在子元素中用<result>额外地指定POJO变量名和数据字段的绑定关系（如<result property="id" column="uid"></result>）	
+  - resultMap用于名称不严格一一对应时，还能在子元素中用<result>额外地指定POJO变量名和数据字段的绑定关系（如`<result property="id" column="uid"></result>`）	
 - D.[√]在同一个映射文件中可以配置多个`<select>`元素
 
 ### 9.以下不属于<foreach>元素中使用的属性的是
@@ -116,7 +116,7 @@
 
 ### 1. [x]MyBatis是通过`<resultMap>`元素的`<collection>`子元素该元素来处理一对一关联关系的。
   - 见上第8题C，通过`<result>`子元素处理
-  - 
+
 ### 2. [√]MyBatis在映射文件中加载关联关系对象主要通过两种方式:嵌套查询和嵌套结果。
 - 当一个POJO对象同时包含多个表的数据时可以用嵌套查询/嵌套结果获取数据
 - **嵌套查询**：对多个表进行多次查询，再将查询结果合并出一个完整的POJO对象，优点是不需要写复杂的SELECT语句，缺点是多次表查询，效率低下
