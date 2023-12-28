@@ -1,5 +1,7 @@
 # J2EE 考试范围及复习提纲
 
+注：课程中SpringMVC部分主要采用**前后端不分离+JSP页面负责前端的数据传递和视图渲染**，Mybatis的Mapper和Spring的Bean注册主要基于**XML**进行配置，**不涉及关于前后端分离（Vue及Http网络请求）和SpringBoot的内容**
+
 ## 考试范围
 
 范围：第一章到第十五章
@@ -691,6 +693,129 @@ public class UserController{
 - D.[x]如果查询条件参数是包装类中POJO的子属性，则参数名必须为“对象.子属性.属性值”的形式。
   - C和D一起解释，比如说`Order`类同时包含`Product`和`Customer`，你就不能在参数里就直接**解构这个Order**，正确的做法是参数里把**整个Order对象**传进来，然后在方法体中再去获取它的成员
 
+## SSM框架整合（13-15章）
+
+### 1.[x]`<mvc:interceptor>`中的子元素可以按照任意位置编写。
+- 课件原文：**注意:`<mvc:interceptor>`中的子元素必须按照上述代码的配置顺序进行编写，否则文件会报错。**
+
+**1拦截器配置例**
+```XML
+<mvc:interceptors>
+  <!--全局拦截器-->
+  <bean class="cn.test.interceptor.Customlnterceptor"/>
+
+  <!--局部拦截器-->
+  <mvc:interceptor>
+    <!--拦截地址-->
+    <mvc:mapping path="/**">
+    <!--例外地址-->
+    <mvc:exclude-mapping path="/login"/>
+    <!--局部拦截器类-->
+    <bean class="cn.test.interceptor.Interceptor1"/>
+  </mvcinterceptor>
+
+  <!--局部拦截器-->
+  <mvc:interceptor>
+    <mvc:mapping path="/hello"/>
+    <bean class="cn.test.interceptor.Interceptor"/>
+  </mvc:interceptor>
+</mvc:interceptors>
+```
+
+### 2.[√]Spring MVC的文件上传是通过MultipartResolver对象实现的，并可以通过UUID等方式对上传的文件名称进行重命名来避免重名问题。
+- 上传文件时，前端传递一个**multipart/form-data**类型的数据，后端通过**CommonsMultipartResolver**解析文件
+- 下载文件时，后端将文件以字节流的形式写到`HttpServletResponse`中，前端会接收到一个**Blob**对象（即**大型二进制对象**）
+
+### 3.[√]Spring MVC框架通过HandlerExceptionResolver处理程序异常，它仅有一个接口方法resolveException()。
+
+**3HandlerExceptionResolver源码：**
+```Java
+public interface HandlerExceptionResolver {
+    @Nullable
+    ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, @Nullable Object handler, Exception ex);
+}
+```
+
+### 4.[x]Spring 2.0版开始引入格式化转换框架，这个框架位于org.springframework.format包中。
+- Formatter是在Spring 3.0加入的，包名是对的
+
+**4Formatter接口源码：**
+```Java
+package org.springframework.format;
+
+public interface Formatter<T> extends Printer<T>, Parser<T> {
+}
+```
+
+### 5.使用@RequestMapping注解限定POST请求方法时，需要做出的指定是
+- A.[√]method=RequestMethod.POST
+- B.[x]method=HttpMethod.POST
+  - Spring也有这个枚举，但是用这个会报错（因为只接受`RequestMethod`）
+- C.[x]method=POST
+- D.[x]method=Method.POST
+  - Method指的一般是反射的Method类，反射的方法类当然不对啦
+
+### 6.以下有关Spring MVC中自定义拦截器的方法说法错误的是
+- A.[√]自定义的拦截器可实现Handlerlnterceptor接口来实现。
+- B.[√]preHandler()方法会在控制器方法前执行，其返回值表示是否中断后续操作。
+- C.[x]postHandle()方法会在控制器方法和解析视图之后执行。
+- D.[√]afterCompletion())方法:该方法会在整个请求完成，即视图渲染结束之后执行。
+- 正确顺序应当是：**preHandle拦截->HandlerAdapter处理请求（Handle）->postHandle拦截->DispatcherServlet渲染(Render)->afterCompletion拦截**
+- 注：只有preHandle拦截器是**按照index正序顺序拦截**的（1,2,3...），其余的都是**按照逆序**拦截（...3,2,1）
+
+### 7.关于使用拦截器实现的用户权限验证的执行流程，下面说法错误的是
+- 这里的业务逻辑都是课件自己设计的，出的题很怪，比如说C选项，你在拦截器写了提示的代码就会有提示，不写就不会有，包括A和B也是你想怎么重定向/跳转就怎么写业务代码，不是定死的。这里只能从几个选项里选出那个明显错误的D选项
+- A.[√]只有登录后的用户才能访问系统中的主页面。
+- B.[√]如果没有登录系统而直接访问主页面，则兰截器会将请求拦截，并转发到登录页面。
+- C.[√]如果用户名或密码错误，会在登录页面给出相应的提示信息。
+- D.[x]当已登录的用户在系统主页中单击“退出”链接时，系统会回到主页面。
+  - 应当回到登陆页面，总不能注销了还在个人主页吧
+  - 注：这里的逻辑和SpringSecurity是类似的，访问网站直接进入**登陆页面**，如果不登陆的话整个网站都访问不了，可以认为这个网站**整体就是一个后台网站**，不包括前台的部分
+
+### 8.下面关于文件下载方法内容描述错误的是
+- A.[√]响应头信息中的MediaType代表的是lnterner Media Type (即互联网媒体类型) ，也叫做MIME类型。
+  - **互联网媒体类型**（Internet Media Type）也叫**内容类型**（Content Type）和**多用途互联网邮件扩展**（英语：Multipurpose Internet Mail Extensions，缩写：MIME），话是这么说但是该协议现在已经并不局限于邮件附件，而是成为了通用的媒体传输协议
+- B.[√]MediaType.APPLICATION_OCTET_STREAM的值为application/octet-stream，即表示以二进制流的形式下载数据。
+  - 详见维基百科[互联网媒体类型#Type_application](https://zh.wikipedia.org/wiki/%E4%BA%92%E8%81%94%E7%BD%91%E5%AA%92%E4%BD%93%E7%B1%BB%E5%9E%8B#Type_application)——**application/octet-stream:任意的二进制文件（通常做为通知浏览器下载文件）**
+- C.[√]HttpStatus类型代表的是Http协议中的状态。
+  - 就是三位的状态码，具体含义见下
+- D.[x]HttpStatus.OK表示500，即服务器已成功处理了请求。
+  - 1XX：请求处理中
+  - 2XX：成功（Success）
+  - 3XX：重定向
+  - 4XX：客户端错误
+  - 5XX：服务端错误
+
+### 9.在下面选项中，不属于整合SSM框架所编写的配置文件的是
+- A.[√]db.properties
+  - 数据库常量配置文件
+- B.[√]applicationContext.xml
+  - Spring配置文件
+- C.[√]mybatis-config.xml
+  - Mybatis配置文件
+- D.[x]Struts.xml
+  - 为啥会有Strust? Strusts是和Spring MVC相同定位的Web MVC开发框架，但是已经是上一代的框架了，而且也不可能在一个项目中同时用到两种Web MVC框架
+- 除此之外还需要配置SpringMVC的配置文件**springmvc-servlet.xml**和Servlet的web容器配置**web.xml**
+
+### 10.在SSM框架整合中，下列选项中不需要配置在web.xml中的是
+- A.[√]Spring的文件监听器
+- B.[√]编码过滤器
+- C.[x]视图解析器
+- D.[√]Spring MVC前端控制器
+
+**在springmvc-servlet.xml中配置的内容：**
+- ControllerComponent控制器组件扫描
+- Annotation-Driven注解驱动
+- Resources静态资源访问（static）
+- MultipartResolver文件解析器
+- ViewResolver视图解析器
+- Intercepters拦截器
+
+**在web.xml中配置的内容：**
+- ContextLoaderListener文件监听器
+- CharacterEncodingFilter编码过滤器
+- DispatcherServlet前端控制器
+- 可以看到web.xml中配置的都是一些系统级别的整体设置，并不和SpringMVC强绑定
 
 ---
 
