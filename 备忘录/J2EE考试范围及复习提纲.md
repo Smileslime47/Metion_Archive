@@ -399,24 +399,316 @@ public class AppConfig {
 - D.[x]@After用于定义后置通知，相当于AfterReturningAdvice
   - After**不考虑被拦截方法的返回值**，而AfterReturning会**将方法的返回值也拦截下来**
 
+---
+
+## Mybatis与Spring整合（9-10章）
+
+### 1.[x]Spring中的事务管理分为编程式事务管理和声明式事务管理，其中的编程式事务管理是通过AOP技术实现的事务管理。
+- 编程式事务是通过`TransactionManager`类及其相应的方法编写事务代码实现的
+  - 因此事务管理和业务代码**强耦合**，是不AoP的，类似写多线程同步的感觉
+- 声明式事务是通过Spring提供的`@Transactional`注解或xml的`<tx:method>`元素的实现的，**基于AoP**
+
+### 2.[√]注解`@Transactional`与`<tx:method>`元素中的事务属性基本是对应的，并且其含义也基本相似。
+- 见1题声明式事务
+
+### 3.[√]MyBaits与Spring进行整合时，Dao层开发既可以使用传统的DAO方式的开发整合，也可以使用Mapper接口方式的开发整合。
+
+**3传统Dao配置例：**
+```Java
+//interface
+public interface StudentDao {
+  public Student findById(Integer id);
+}
+```
+
+手动实现Dao层代码：
+```Java
+//Impl，注意这里继承了SqlSessionDaoSupport用来获取数据库的session
+public class StudentDaoImpl extendsSqlSessionDaoSupport implements StudentDao {
+  @Override
+  public Student findById(Integer id){
+    return this.getSqlSession().selectOne("org.example.po"+".StudentMapper.findById",ID)
+  }
+}
+```
+
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+< ! DOCTYPE mapper PUBLIC "- //mybatis.org//DTD Mapper 3.8//EN"
+"http: / /mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.po.StudentMapper">
+  <select id="findById" parameterType="Integer"
+  resultType="student">
+    select * from student where id = #{id}
+  </select>
+</mapper>
+```
+
+**3Mapper接口配置例：**
+```Java
+//interface
+public interface StudentMapper {
+  public Student findById(Integer id);
+}
+```
+
+由Spring自动构造出Mapper的实例化Bean：
+```xml
+<!--applicationContext.xml-->
+...
+<beans>
+  <!--注册Mapper接口的实例化Bean-->>
+  <!--方法1：通过MapperFactoryBean手动配置各个Mapper实例化Bean的属性-->>
+  <bean id="customerMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">
+    <property name="mapperInterface" value="org.example.mapper.StudentMapper"/>
+    <property name="sqlSessionFactory" ref="sqlSessionFactory"/> 
+  </bean>
+  <!--方法2：通过MapperScannerConfiguer扫描指定包路径下的所有Mapper-->
+  <bean class="org.mybatis.spring.mapper. MapperScannerConfigurer">
+    <property name="basePackage" value="org.example.mapper"/>
+  </bean>
+</beans>
+```
+
+XML部分无变化
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+< ! DOCTYPE mapper PUBLIC "- //mybatis.org//DTD Mapper 3.8//EN"
+"http: / /mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.po.StudentMapper">
+  <select id="findById" parameterType="Integer"
+  resultType="student">
+    select * from student where id = #{id}
+  </select>
+</mapper>
+```
+
+### 4.[√]在项目中，业务层(Service层)既是处理业务的地方，又是管理数据库事务的地方。业务层实现类往往需要使用注解@Service和@Transactional来标识。
+- 正确，因为一般来说Service内的函数才是相对于业务而言的”原子“操作，事务管理也应当在Service中进行
+
+### 5.JdbcTemplate类包含在Spring JDBC模块的哪个包中
+- JdbcTemplate实现了简单的SQL操作、异常处理、事务管理等功能
+- A.[√]core(核心包)
+- B.[x]dataSource(数据源包)
+- C.[x]object (对象包)
+- D.[x]support(支持包)
+
+**JdbcTemplate源码：**
+```Java
+package org.springframework.jdbc.core;
+
+...
+
+public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
+  ...
+}
+```
+### 6.JdbcTemplate的直接父类是
+- 见5题JdbcTemplate源码
+- A.[√]JdbcAccessor
+  - JdbcAccessor是一个抽象类，包含了访问数据源（DataSource）的一些方法
+- B.[x]JdbcOperations
+  - JdbcOperations是一个接口，要求实现类覆写执行SQL语句的相关方法（excute、query等）
+- C.[x]JdbcSupper
+- D.[x]Object
+
+### 7.以下关于@Transactional注解可配置的参数信息及描述正确的是
+- A.[√]value用于指定需要使用的事务管理器，默认为""
+- B.[x]read-only用于指定事务是否只读，默认为`true`
+  - 默认是false，用常识想一想大部分事务肯定是读写都有的
+- C.[x]isolation用于指定事务的隔离级别，默认为`lsolation.READ_COMMITTED`
+  - MySQL默认是可重复读（`REPEATED_READ`），四个事务隔离级别不再赘述
+- D.[x]propagation用于指定事务的传播行为，默认为`Propagation.SUPPORTS`
+  - 默认是`REQUIRED`
+
+**事务传播级别：**
+- Propagation.REQUIRED（有一个事务就行，在哪无所谓）
+  - 如果当前存在事务，则加入该事务，如果当前不存在事务，则创建一个新的事务。
+- Propagation.REQUIRES_NEW（必须在内层**重新**开一个事务）
+  - 重新创建一个新的事务，如果当前存在事务，暂停当前的事务。
+- Propagation.NESTED（优先嵌套）
+  - 逻辑和REQUIRED的操作一样，区别在于：
+  - REQUIRED是加入原事务，因此最终也只有一个事务，回滚时全部回滚
+  - NESTED是将自己的事务嵌套到原事务中，回滚时支持只有自己回滚而父事务不回滚
+- Propagation.MANDATORY（必须外层**已经**有一个事务）
+  - 如果当前存在事务，则加入该事务;如果当前不存在事务，则抛出异常。
+- Propagation.NEVER（必须外层**没有任何**事务）
+  - 以非事务的方式运行，如果当前存在事务，则抛出异常。
+- Propagation.SUPPORTS（有没有事务无所谓）
+  - 如果当前存在事务，则加入该事务;如果当前不存在事务，则以非事务的方式继续运行。
+- Propagation.NOT_SUPPORTED（只要没有事务就行）
+  - 以非事务的方式运行，如果当前存在事务，暂停当前的事务。
+
+### 8.以下不属于MapperScannerConfigurer类在Spring配置文件中使用时可以配置的属性的是
+- A.[√]basePackage
+  - 指定Scanner搜索的包路径
+- B.[√]annotationClass
+  - 指定扫描的注解类，默认就是`@Mapper`，即`Mapper.class`
+- C.[√]sqlSessionFactoryBeanName
+  - 当项目中有多个DataSource时，可以用该Property指明绑定的SqlSessionFactory
+- D.[x]mapperlnterface
+  - 这里应该是`markerInterface`，指定一个接口，使Scanner**只会扫描实现了该接口的Mapper**
+
+### 9.在MyBatis+Spring的项目中，以下有关事务的相关说法正确的是
+- A.[x]在MyBatis+Spring的项目中，事务是由MyBatis来管理的。
+  - 事务是由Spring管理的（`TransactionManager`或者声明式的`@Transactional`）
+- B.[x]在项目中，数据访问层既是处理业务的地方，又是管理数据库事务的地方。
+  - 处理业务的是Service层
+- C.[√]进行注解开发时，需要在配置文件中配置事务管理器并开启事务注解。
+- D.[x]进行注解开发时，需要使用@Transactional注解来标识表现层中的类。
+  - 表现层指**Viewer**和**Controller**（即Web层），但是事务是在**Service**层管理的，即业务层，还有一层是持久层——**Dao**
+
+### 10. Mapper接口编程方式很简单，下面有关Mapper接口必须遵守的规范不包括的是
+- A.[√]Mapper接口名称和对应的Mapper.xml映射文件的名称必须一致。
+- B.[√]Mapper.xml中的namespace与Mapper接口的类路径相同。
+  - namespace用于将该配置文件绑定到项目的Mapper接口中，应当填写接口的全限定名（类似这个Mapper本身的JavaType）
+- C.[x]Mapper接口中的方法名和Mapper.xml中定义的每个执行语句的name相同。
+  - 应当和id相同，SELECT没有name属性
+- D.[√]Mapper接口方法的输出参数类型要和Mapper.xml中定义的resultType的类型要相同。
+- 这题是前面的原题
+
+---
+
+## Spring MVC基础（11-12章）
+
+### 1.[√]在web.xml中配置SpringMVC的前端控制器DispatcherServlet，其中`<load-on-startup>`子元素中的1表示容器在启动时立即加载这个Servlet。
+- 望文生义，嗯哼
+
+### 2.[x]在Spring MVC的工作流程中，HandlerAdapter将会将ModelAndView对象返回给ViewReslover。
+- 见下11.4简答题Spring MVC工作流程，HandlerAdapter将ModelAndView对象返回给**DispatcherServlet**
+
+### 3.[√]在控制器类中，每一个请求处理方法都可以有多个不同类型的参数，以及一个多种类型的返回结果。
+- 参考`@RestController`，可以以表单（xxx-form）传入多个参数，也可以返回一个JSON对象作为复杂的返回结果
+
+### 4.[√]在使用POJO类型数据绑定时，前端请求的参数名必须与要绑定的POJO类中的属性名一样。
+- 由于JavaScript的对象都是哈希表，当后端返回一个POJO对象时，前端接收到的对象的结构和后端的POJO类就是相同的，直接用相同的字段名去访问
+
+### 5. Spring MVC中的后端控制器是指
+- A.[x]HandlerAdapter
+- B.[x]DispatcherServlet
+- C.[x]ViewReslover
+- D.[√]Handler
+  - Handler和Controller是同一个概念，后端的控制器就是Controller，详见11.4简答题Spring MVC工作流程
+
+### 6.以下有关Spring MVC支持的返回值类型及说法错误的是
+- 视图可以理解为**返回结果的结构**，类似**VO对象**，设置好数据后，根据不同的返回类型（PDF、JSON、JSP）可能需要有不同的渲染/编码方式，在经过ViewResolver渲染后才会返回给前端，在前后端分离的情况下几乎只会用到**JSON视图**来返回给前端JSON对象
+- 如果视图以**JSP**返回的话，那么就会直接渲染成一个JSP页面，一般说的**跳转视图**也是指这个，此时视图名称代表跳转的JSP文件名，举例来说，当视图名称为`"hello"`时，控制器会通知前端跳转到`/WEB-INF/jsp/index.jsp`页面下
+- A.[√]ModelAndView返回值类型中可以添加Model数据，并指定视图。
+  - 新建一个`ModelAndView`对象后，通过`addObject()`方法添加数据，并通过`setViewName()`方法设置视图名称
+- B.[x]String返回值类型也可以携带数据并跳转视图。
+  - String返回值默认只返回**视图名**(默认情况)或者**字符串数据**(`@ResponseBody`情况)，无法同时做到返回视图和数据（注：其实可以在方法参数添加Model来返回数据，但是这一点和题意不符）
+- C.[√]void返回类型主要在异步请求时使用，它只返回数据，而不会跳转视图。
+  - 第一种情况：当前操作不需要返回值
+  - 第二种情况：通过方法参数的`HttpServletResponse`设置返回值，如`res.setStatus()`等方法
+  - 第三种情况：通过方法参数的`HttpServletResponse`设置重定向，如`res.sendRedirect()`
+  - 第四种情况：通过`HttpServletResponse`的`getWritter()`方法获取Writer，并返回字符串
+- D.[√]String类型除了可以返回视图页面外，还可以进行重定向与请求转发。
+
+**6String返回视图例：**
+```Java
+@RequestMapping("...")
+//如果这里加上@ResponseBody的话，那就是返回字符串数据了
+public String test() {
+  return "hello"; //视图名称，参考上ModelAndView的setViewName
+}
+```
+
+**6String重定向例：**
+重定向相当于修改地址栏地址并刷新了页面，不仅会清空请求域数据，而且会与服务端进行两次Http请求
+```Java
+@RequestMapping("...")
+public String test(Model model) {
+  return "redirect:/aa/index"
+}
+```
+
+**6String转发例：**
+转发只是修改了服务端响应的部分，不会改变地址栏也不会丢失数据
+```Java
+@RequestMapping("...")
+public String test(Model model) {
+  return "forward:/aa/index"
+}
+```
+
+### 7.RequestMapping注解类型的作用是
+- RequestMapping指明了该方法**拦截Http请求的哪个请求路径/域名**，这题的选项给的挺模糊的，反正大概是这么一个意思
+- A.[√]用于映射─个请求或—个方法。
+- B.[x]用于映射一个控制器类。
+- C.[x]用于映射请求参数。
+- D.[x]用于映射请求类型。
+
+### 8.以下有关Spring MVC数据绑定中集合数据绑定的说法正确的是
+- 绑定数组时：Controller方法参数可以直接接受一个`Array`数组，可以直接在方法参数中传递而不需要封装，常用在**根据主键id批量删除**
+- 绑定集合时：Controller方法参数不能直接接受一个`List<POJO>`集合，需要将该集合封装到一个类中来传递，常用在**批量修改数据**
+- A.[x]批量删除用户操作时，前端请求传递过来的参数就会包含多个相同类型的数据，此时可以采用数组类型数据绑定的形式。
+  - 存疑，它想强调的可能是**相同名称**的数据，比如批量删除肯定传过来的都是**名称为Id的Integer**，如果在一堆Id中间加一个Age进去也算相同类型（Integer），但是这时候就不对了（但是这么有点强行解释的意思了）
+- B.[x]使用集合数据绑定需要后台方法中定义一个集合类型参数介绍绑定前端请求参数。
+  - 不能直接在参数中使用`Collection`集合类，需要将其封装，见D选项
+- C.[x]绑定数组与绑定集合页面传递的参数相同，只是后台接收方法的参数不同。
+  - 传递数组时，前端传递的参数是**包含多个单一类型的简单数组**，而传递集合时，前端传递的参数是**包含多个复杂对象的对象数组**
+- D.[√]在使用集合数据绑定时，后台方法中不支持直接使用集合形参进行数据绑定。
+  - Controller方法参数不能直接接受一个`List<POJO>`集合，需要将该集合封装到一个类中来传递
+
+**8传递数组例**
+```Java
+@RestController
+public class UserController{
+  @RequestMapping("...")
+  public void delete(Integer[] usersId){
+    ...
+  }
+}
+```
+
+**8传递集合例**
+```Java
+public class UsersVo{
+  List<User> Users;
+}
+
+@RestController
+public class UserController{
+  @RequestMapping("...")
+  public void update(UsersVo usersVo){
+    ...
+  }
+}
+```
+
+### 9.下面不属于Spring MVC中进行数据绑定的常用默认参数类型的是
+- A.[√]HttpServletRequest
+- B.[√]HttpServletResponse
+- C.[√]HttpSession
+- D.[x]ModelView
+  - 应当是Model/ModelMap，`ModelAndView`类只能自行`new`，不能在**方法参数**中直接引入
+
+### 10.下面关于包装POJO类型数据绑定的说法正确的是
+- A.[√]如果查询条件参数是包装类的直接基本属性，则参数名直接用对应的属性名。
+- B.[x]如果查询条件参数是包装类的直接基本属性，则参数名必须使用对应的“对象.属性名”。
+  - 方法参数里都不知道对象的引用叫什么怎么可能写**对象.属性名**
+- C.[x]如果查询条件参数是包装类中POJO的子属性，则参数名必须为属性名。
+- D.[x]如果查询条件参数是包装类中POJO的子属性，则参数名必须为“对象.子属性.属性值”的形式。
+  - C和D一起解释，比如说`Order`类同时包含`Product`和`Customer`，你就不能在参数里就直接**解构这个Order**，正确的做法是参数里把**整个Order对象**传进来，然后在方法体中再去获取它的成员
 
 
-
-
-
-
+---
 
 ## 11.4简答题
-1. 简述Spring MVC的工作流程
-- 用户发送请求至前端控制器DispatcherServlet。
-- DispatcherServlet收到请求调用HandlerMapping处理器映射器。
-- 处理器映射器找到具体的处理器(可以根据xml配置、注解进行查找)，生成处理器对象及处理器拦截器(如果有则生成)一并返回给DispatcherServlet。
-- DispatcherServlet调用HandlerAdapter处理器适配器。
-- HandlerAdapter经过适配调用具体的处理器(Controller，也叫后端控制器)。
-- Controller执行完成返回ModelAndView。
-- HandlerAdapter将controller执行结果ModelAndView返回给DispatcherServlet。
-- DispatcherServlet将ModelAndView传给ViewReslover视图解析器。
-- ViewReslover解析后返回具体View。
-- DispatcherServlet根据View进行渲染视图（即将模型数据填充至视图中）。
-- DispatcherServlet响应用户
 
+### 1. 简述Spring MVC的工作流程
+1.  用户通过浏览器发送请求，请求会被 Spring MVC 的**前端控制器-DispatcherServlet**接收。
+2.  DispatcherServlet 拦截到请求后，会调用**处理器映射器-HandlerMapping**。
+3.  HandlerMapping根据请求 URL 找到具体的**处理器-Handler** ，生成Handler对象（如果有，还会生成拦截器对象）并返回给 DispatcherServlet 。
+4. DispatcherServlet 根据返回信息（Handler）选择合适的**处理器适配器-HandlerAdapter**。
+5. HandlerAdapter 会调用并指定 Handler 。此处和上述所说的处理器 Handler ，就是我们所编写的 Controller 类。
+6. Controller 执行完成后，会返回一个 **ModelAndView 对象**，该对象中会包含**视图名**和**模型对象**。
+7. HandlerAdapter 将 ModelAndView 返回给 DispatcherServlet 。
+8. DispatcherServlet 会根据返回信息（ModelAndView）选择一个合适的**视图解析器-ViewResolver**。
+9. 视图解析器 ViewResolver 解析视图后，会向 DispatcherServlet 返回具体的 View 对象。
+10. DispatcherServlet 对 View 进行渲染。即，将**模型数据**填充至**视图**中。
+11. DispatcherServlet 将渲染后的结果返回、发送给客户端浏览器。
+
+在上述执行过程中，DispatcherServlet、HandlerMapping、HandlerAdapter 和 ViewResolver 对象的工作都是在框架内部执行的，开发人员并不需要关心这些对象内部实现过程。
+
+和程序员有关的内容只有 **Handler（即，代码中的 Controller）**，和 ModelAndView 对象
