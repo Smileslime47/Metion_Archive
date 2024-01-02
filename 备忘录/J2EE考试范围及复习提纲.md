@@ -87,7 +87,7 @@
 - B.[√]parameterType属性表示传入SQL语句的参数类的全限定名或者别名。
 - C.[x]resultMap表示外部resultMap的命名引用，返回时可以同时使用resultType和resultMap。
   - 可以使用 resultType 或 resultMap，但不能同时使用。
-  - resultTyoe是`<select>`的一个属性，即`<select resultType="...">`，而resultMap是`<select>`的一个子元素，即`<select><resultMap></resultMap></select>`(具体使用可以见下例)
+  - resultTyoe是`<select>`的一个属性，即`<select resultType="...">`，而resultMap是和`<select>`并列的一个元素，即`<resultMap>...</resultMap><select>...</select>`(具体使用可以见下例)
   - resultType用于返回数据的字段和POJO类的名称严格一一对应时，指明返回数据的POJO类型，不需要多余的属性
   - resultMap用于名称不严格一一对应时，还能在子元素中用<result>额外地指定POJO变量名和数据字段的绑定关系（如`<result property="id" column="uid"></result>`）	
 - D.[√]在同一个映射文件中可以配置多个`<select>`元素
@@ -331,11 +331,11 @@ public class AlphaAspect {
 
 ### 7. 下列选项中，不属于Spring中实例化Bean的方式的是
 - A.[√]构造器实例化
-  - `<bean class="org.sang.User" id="user" />`默认就是构造器实例化的，对应@Component注解
+  - `<bean class="org.example.User" id="user"/>`默认就是构造器实例化的，对应@Component注解
 - B.[√]静态工厂方式实例化
-  - `<bean id="user" class="org.sang.User2Factory" factory-method="getInstance"/>`，注意**class也变成了工厂的全限定名**
+  - `<bean id="user2" class="org.example.User2Factory" factory-method="getUser"/>`，注意**class也变成了工厂的全限定名**
 - C.[√]实例工厂方式实例化
-  - `<bean class="org.sang.User3Factory" id="user3Factory" /><bean id="user3" factory-bean="user3Factory" factory-method="getUser3" />`
+  - `<bean class="org.example.User3Factory" id="user3Factory"/><bean id="user3" factory-bean="user3Factory" factory-method="getUser"/>`
 - D.[x]抽象方法实例化
   - 抽象方法根本就没有实例化的过程怎么实例化啊（
 
@@ -821,9 +821,391 @@ public interface Formatter<T> extends Printer<T>, Parser<T> {
 
 ---
 
-## 11.4简答题
+## 1.2 Mybatis框架简介（名词解释）
 
-### 1. 简述Spring MVC的工作流程
+### 概念
+
+**数据持久化**：将内存中的数据模型转换为存储模型，以及将存储模型转换为内存中的数据模型的统称。数据模型可以是任何数据结构或对象模型，而存储模型可以是关系模型、XML、二进制流等。
+
+**Mybatis**：Mybatis是一个开源的数据持久层框架，内部封装了通过JDBC访问数据库的操作，支持普通的SQL查询、存储过程和高级映射，消除了所有JDBC代码和参数的手工设置和结果集的检索。
+- 主要思想是将程序中的大量SQL语句剥离出来，配置在文件中
+
+**ORM框架**：Object Relational Mapping——对象关系映射，解决面向对象语言和数据库数据类型不匹配的技术。通过描述Java对象和数据库表之间的映射关系，自动将Java中的对象持久化到关系型数据库的表中。是一种数据持久化技术，在对象模型和关系型数据库之间建立对应关系，并提供通过JavaBean对象操作数据库表中数据的机制。
+
+**POJO对象**：Plain Old Java Object——普通旧式Java对象，符合JavaBean规范的实体类，不需要继承/实现任何Java基类/接口，其状态保存在属性中，访问属性必须通过对应的getter方法和setter方法。
+
+## 1.3 Mybatis工作原理（简答）
+
+1. 读取配置文件`mybatis-config.xml`，包含Mybatis的全局配置信息，用于获取数据库链接
+2. 读取多个映射文件`mapper.xml`，每个映射对应数据库中的一张表
+3. 通过配置信息构建会话工厂`SqlSessionFactory`（该类是线程安全的）
+4. 创建会话对象`SqlSession`（该类是线程不安全的），该对象包含执行SQL的所有方法
+5. 创建`Executor`执行器，通过`SqlSession`传递的参数动态生成Sql语句并负责查询缓存的维护
+6. 创建`MappedStatement`对象，用于存储要映射的SQL语句的ID、参数等信息。`mapper.xml`中的一个SQL语句对应一个`MappedStatement`对象，SQL语句的ID就是`MappedStatement`的ID
+7. 输入映射：`Executor`通过`MappedStatement`将输入的Java对象映射到SQL语句中
+8. 输出映射：`Executor`通过`MappedStatement`将SQL输出的结果映射至Java对象中
+
+## 2.1 Mybatis核心接口和类（名词解释）
+
+### 概念
+
+**SqlSessionFactoryBuilder**：负责构建`SqlSessionFactory`，并提供多个`build()`方法的重载，特点是用过即丢，创建`SqlSessionFactory`后就不再需要了，因此最佳范围是存在在方法体内，即局部变量
+
+**SqlSessionFactory**：创建`SqlSession`实例的工厂，Mybatis的所有应用以`SqlSessionFactory`为中心，可以通过其`openSession()`方法来获取`SqlSession`实例
+- openSession(boolean)：传入true时表示开启自动提交，无事务控制，默认为true
+- `SqlSessionFactory`的生命周期是**Application**，一旦创建就会在整个应用运行过程中始终存在，没有必要销毁或者再次创建，即**单例模式**
+
+**SqlSession**：用于执行持久化操作，类似JDBC的`Connection`对象，提供了面向数据库执行SQL命令所需的所有方法，可以通过`SqlSession`实例直接运行已映射的SQL语句
+- 生命周期取决于**数据库会话**，每次访问都会创建，并且是**thread local**的，即每个线程独占自己的`SqlSession`实例，不与其他进程共享（因为该对象是非线程安全的），范围应当是**request作用域或方法体内**
+
+## 2.3 Mybatis映射文件（名词解释&简答）
+
+这段写的我吐血...
+
+注：整个xml并**不一定逻辑通顺**，仅用来帮助理解映射文件的元素使用方法，比如说前面举例用user，后面就用student了
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper ...>
+<!--namespace属性指向mapper.xml所对应的Mapper接口的全限定名-->
+
+  <select ...>
+  <!--id属性表示命名空间中的唯一标识符-->
+  <!--parameterType属性表示方法传入参数的全限定名（可选，因为Mybatis支持类型推断）-->
+  <!--resultType属性表示SQL语句返回类型的全限定名-->
+  <!--resultMap属性表示外部resultMap的命名引用，和resultType二选一使用-->
+  <!--flushCache属性表示每次查询是否清空缓存，默认为false-->
+  <!--useCache属性表示是否使用二级缓存，默认为true-->
+  <!--timeout属性表示超时时间，单位为秒-->
+  <!--fetchSize属性表示获取结果的容量-->
+  <!--statementType属性设置使用JDBC的哪个Statement，可选项为STATEMENT,PREPARED(默认),CALLABLE-->
+  <!--resultSetType属性表示结果集类型，可选项为FORWARD_ONLY,SCROLL_SENSITIVE,SCROLL_INSENSITIVE，无默认值-->
+    select 
+    <include refid="userColumns"> 
+      <property name="extra" value="address"/>
+    </include>
+    from user where id =#{id}
+  </select>
+
+  <insert ...>
+  <!--支持大部分select的属性-->
+  <!--keyProperty属性指示将插入的返回值赋值给POJO的哪个属性，一般绑定为主键-->
+  <!--keyColumn属性指示第几列字段为主键，当且仅当主键不在第一列时需要设置-->
+  <!--useGeneratedKeys属性指示使用JDBC的getGeneratedKeys()方法获取数据库内部生成的主键，默认为false-->
+    <selectKey ...>
+    <!--当且仅当当前数据库不支持自动生成主键时，使用该元素来自动生成主键-->
+    <!--keyProperty属性参考上文-->
+    <!--resultType属性参考上文-->
+    <!--statementType属性参考上文-->
+    <!--order属性：BEFORE指示先设置主键再插入元素，AFTER指示先插入元素再配置主键-->
+      select if(max(id) is null,1,max(id)+1) as newId from user
+    </selectKey>
+    insert into user(id,userName,userPassword,...) values (#{id},#{userName},#{userPassword},...)
+  </insert>
+    
+  <update>
+  <!--参考select-->
+  </update>
+
+  <delete>
+  <!--参考select-->
+  </delete>
+
+  <sql id="userColumns">
+  <!--宏定义-->
+  <!--id属性指示命名空间的唯一标识符-->
+    userName,userPassword,gender,birthday,phone,${extra}
+  </sql>
+
+  <resultMap>
+  <!--用于构建复杂的类和表的映射关系-->
+  <!--id属性指示命名空间的唯一标识符-->
+  <!--type属性将其绑定到表名上-->
+    <constructor>
+    <!--用于向该POJO类的构造器传入参数-->
+      <idArg/><!--指示主键字段-->
+      <arg/>
+    </constructor>
+
+    <result property="stName" column="st_name"/>
+    <result property="stAge" column="st_age"/>
+    <!--result用于绑定POJO类中的字段名和数据库表中的字段名-->
+
+    <association property="class" column="class_id" javaType="Class" resultMap="classMap"/>
+    <!--association用于绑定POJO中的引用和数据库表中的外键-->
+
+    <collection property="courses" column="course_id" ofType="Course" resultMap="courseMap"/>
+    <!--collection用于构建一对多关系（如学生的选课列表）-->
+
+   <discriminator column="enabled" javaType="int">
+   <!--根据返回结果中的某个字段切换不同的类型-->
+        <case value="1" resultMap="enabledStudent"/>
+        <case value="0" resultMap="disabledStudent"/>
+    </discriminator>
+  </resultMap>
+</mapper>
+```
+
+## 3.4 使用foreach元素完成复杂查询（名词解释？）
+
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper ...>
+  <select ...>
+    select * from user 
+      where role in
+        <foreach 
+          collection="array" 
+          item="roleIds" 
+          open="(" 
+          separator="," 
+          close=")">
+        <!--collection属性指示入参类型，可选项为：list,array,map-->
+        <!--item属性指示集合在下文的别名-->
+        <!--index属性指示当前迭代的位置，用于在下文引用-->
+        <!--open、separator、close不再赘述-->
+          #{roleIds}
+        </foreach>
+  </select>
+</mapper>
+```
+
+## 3.5 bind元素（名词解释？）
+
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper ...>
+  <select 
+    id="findUserByName" 
+    parameterType="User" 
+    resultType="User">
+    <bind 
+      name="pattern_username" 
+      value="'%'+_parameter.getUserName()+'%'"/>
+    <!--bind可以将某些字段经过格式化处理后再在下文中通过name别名引用，
+    常用于模糊查询，具体属性用法不再赘述-->
+    select * from user 
+      where username like #{pattern_username}
+  </select>
+</mapper>
+```
+
+## 4.2 一对一关系Association（名词解释？）
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper ...>
+  <resultMap>
+    <association 
+      property="class" 
+      column="class_id" 
+      javaType="Class" 
+      select="mybatis.mapper.ClassMapper.selectClassByStId"/>
+    <!--association用于绑定POJO中的引用和数据库表中的外键-->
+    <!--property属性指定POJO中对应的字段名-->
+    <!--column属性指定数据库表中对应的字段名-->
+    <!--javaType属性指定该字段的Java类型-->
+    <!--resultMap属性指定字段的resultMap-->
+    <!--select属性：当该字段需要通过嵌套查询获取数据时，指定对应的查询操作-->
+    <!--fetchType属性指定在关联查询时是否启用延迟加载，可选项为lazy(默认),eager-->
+  </resultMap>
+</mapper>
+```
+
+## 4.3 一对多关系Collection（名词解释？）
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper ...>
+  <resultMap>
+    <collection 
+    property="courseList" 
+    column="st_id" 
+    ofType="course" 
+    select="mybatis.mapper.CourseMapper.selectCourseByStId"/>
+    <!--collection用于在一对多关系查询一方时，获取对应的多方数据-->
+    <!--和association不同点在于javaType换成了ofType，指示集合元素的类型-->
+  </resultMap>
+</mapper>
+```
+
+## 5.2 事务管理（名词解释）
+
+### 概念
+
+**事务**：事务是由一步或几步操作组成最小的逻辑执行单元，整个事务不能被拆开执行，要么全部执行，要么全部取消执行。一般来说，一个业务逻辑往往具有原子性，应当使用事务，如转账操作
+- 事务的特性：**ACID**
+  - **Atomicity——原子性**：事务是最小执行单位，不可再分
+  - **Consistency——一致性**：事务执行的结果，必然使数据库从一种一致性状态转变为另一种一致性状态（如转账操作，前后总额不变）
+  - **Isolation——隔离性**：各个事务互不干扰，一个事务的内部操作不能影响其他事务的操作结果
+  - **Durability——持久性**：事务一旦提交，对数据的变更就应当持久化，如记录到永久存储器中
+
+**Transaction接口**：
+包含`getConnection()`、`commit()`、`rollback()`、`close()`方法，有`JdbcTransaction`和`ManagedTransaction`两个实现类，前者通过JDBC自带的事务管理机制实现事务管理，后者通过第三方容器实现事务管理（如WebLogic、JBOSS等）
+- ManagedTransaction的`commit()`和`rollback()`不会进行任何操作，将具体实现交给第三方容器处理（可能是通过拦截器之类的手段）
+
+## 6.2 Spring的核心容器（名词解释）
+
+### 概念
+
+**BeanFactory**：提供了完整的IoC服务支持，负责管理Bean，包括Bean的初始化和生命周期的控制等功能，创建时需要提供容器的详细配置信息
+- 实现类：`XmlBeanFactory`
+
+**ApplicationContext**：是`BeanFactory`的子接口，也叫做应用上下文，除了BeanFactory的功能外，还添加了国际化、资源访问、事件传播等功能
+- 实现类：`ClassPathXmlApplicationContext`、`FileSystemXmlApplicationContext`
+- 创建后通过`Object getBean(String name)`和`<T> T getBean(Class<T> requiredType)`获取Bean实例
+
+## 6.4 依赖注入和控制反转（名词解释）
+
+### 概念
+
+**控制反转**：Inverse of Control，指对象的实例不再由调用者/应用代码创建，而是由容器（Spring）负责管理，从而将实例的控制权从应用代码转移到框架容器
+
+**依赖注入**：Dependency Inject，当类A包含一个类B成员时，实例化A的过程则依赖于B的实例化，在业务逻辑复杂的情况下，会产生一个复杂的依赖关系链，导致代码的强耦合——增加了开发的复杂程度。在引入Spring框架后，实例的生命周期的控制转移给Spring，由Spring负责将被依赖对象赋值给依赖对象的成员，为调用者注入了其依赖实例。
+- 注入方法：**setter方法注入**和**构造方法注入**
+- IoC和DI是从两个角度描述的同一个概念
+
+## 7.2 Bean的实例化（简答）
+见Spring基础课堂练习（6-8章）第七题：
+
+### 构造器实例化
+```XML
+<bean id="user" class="org.example.User"/>
+```
+
+### 静态工厂方式实例化
+```XML
+<bean id="user2" class="org.example.User2Factory" factory-method="getUser"/>
+```
+
+### 实例工厂方式实例化
+```XML
+<bean id="user3Factory" class="org.example.User3Factory"/>
+<bean id="user3" factory-bean="user3Factory" factory-method="getUser"/>
+```
+
+## 7.4 Annotation装配（名词解释）
+
+Bean的装配方式：XML装配、Annotation装配、自动装配
+- 画考试范围没有画XML装配（7.3）这一节，可能是不打算考吧
+
+### 概念
+
+**@Component**：仅表示该类是一个Bean，并不说明该类的具体含义及功能
+
+**@Repository**：将Dao层的类标识为Bean，额外支持了数据库异常的处理
+
+**@Service**：将业务逻辑层的类标识为Bean
+
+**@Controller**：将控制层的类标识为Bean
+
+**@Autowired**：指示Spring装配该成员变量，优先按照Bean类型匹配
+
+**@Qualifier**：和@Autowired配合使用，传入一个Bean实例名称后强制转为优先按照该Bean实例名称匹配
+
+**@Resource**：指示Spring装配该成员变量，优先按照Bean名称匹配
+- name属性用于限定Bean实例名称
+- type属性用于限定Bean实例类型
+
+### 组件扫描
+
+在Spring配置文件中配置：
+
+```XML
+<context:component-scan base-package="包路径">
+```
+
+自动注册该包路径下所有包含上述的Bean注解的Bean组件
+
+## 7.5 自动装配（名词解释）
+
+除`@Autowired`和`@Resource`外，也可以在XML中配置自动装配
+- 注：这个分节真的有点迷惑= =自动装配的注解不在自动装配这一节里说
+
+可以在配置文件的`<bean>`元素中设置**autowired**属性来设置自动装配的方式
+
+|可选项|含义|
+|-----|----|
+|default|继承父标签`<beans>`中**default-autowire**的设置|
+|byName|名称优先匹配，没有满足类型则不进行装配|
+|byType|类型优先匹配，没有满足类型则不进行装配，如果有多个满足类型则抛出异常|
+|constructor|类似byType，但是优先寻找**构造器参数一致**的构造方法|
+|no|不进行自动装配|
+
+## 7.6 Bean的作用域（自行加入）
+
+虽然没有画范围，但是这是很重要的东西还是记一下
+
+除前两个作用域外，剩下的仅作了解即可
+
+|作用域（7个）|含义|
+|-----|----|
+|singleton|单例模式，每次获取Bean都只会返回同一个Bean实例|
+|prototype|原型模式，每次获取Bean都会返回一个新的Bean实例|
+|request|每个HttpRequest都会装配一个新的Bean实例，仅在该Request内有效|
+|session|每个session都会装配一个新的Bean实例，仅在该session内有效|
+|globalSession|每个全局Http Session装配一个Bean实例，仅在使用portlet上下文时有效（？）|
+|application|每个SevletContext装配一个Bean实例，仅在Web相关的ApplicationContext中生效|
+|websocket|每个websocket装配一个Bean实例，仅在Web相关的ApplicationContext中生效|
+
+## 7.7 Bean的生命周期（自行加入）
+
+虽然没有画范围，但是这是很重要的东西还是记一下
+
+![1703769492357](image/J2EE考试范围及复习提纲/1703769492357.png)
+- ③、④、⑤、⑦仅在Bean实现了对应接口时生效
+- ⑥和⑨在Bean涉及到AoP相关增强时生效
+- ⑧在指定了初始化方法时生效（init-method）
+- ⑩取决于该Bean是`singleton`还是`prototype`
+- ⑪取决于该Bean是实现了`Disposable`接口还是在配置文件中设置了`destory-method`
+
+## 8.1 Spring AoP简介（名词解释）
+
+### 概念
+
+**面向切面编程**：Aspect Oriented Programming，是对OOP的有益补充，适用于具有横切逻辑的场合（如访问控制、事务管理、性能检测）。举例来说，我们可能会在项目的各个业务代码都穿插一些**日志输出**、**事务控制**（这些应用场景被叫做**切面——Aspect**）相关的代码，这些代码往往有两个特性：**零散分布在项目各处**和**集中分布在业务代码前后**，前者让我们无法通过常规的面向对象方式解决这个问题，但后者让我们可以通过**代理模式/装饰器模式**来解决该问题。Spring AOP允许我们将这些代码（这些代码被叫做**通知——Advice**）从业务代码中抽离出来，集中放在一起管理。当我们获取相关的Bean实例时，Spring并不会返回我们直接定义的Bean，而是设计一个新的类——该类的大部分代码和我们定义的Bean相同，但是**在相关的业务方法前后加回了我们原本抽离的代码**，并将实例化后的**代理对象**返回给调用者
+
+**切面**：Aspect，这里指封装的用于横向插入系统功能的类
+
+**连接点**：Joinpoint，指在程序执行过程中的某个阶段点。在Spring AOP中，通知方法可以引入Joinpoint参数，从而对正在执行的方法进行调用等操作
+
+**切入点**：Pointcut，指切面与程序流程的交叉点，即需要处理的连接点
+- 简单来说，在Spring AOP中，Pointcut指出了哪个方法需要被拦截，而Joinpoint则是当前正在被拦截的那个方法
+
+**通知**：Advice，指在特定切入点执行的增强处理，即上文中提到的被抽离的增强代码，是切面的具体实现
+
+**目标对象**：Target Object，指被代理的对象，也叫做被通知对象/被增强对象
+
+**代理**：Proxy，指目标对象被应用AOP后，动态创建出来的代理对象
+- **AOP代理**：AoP Proxy，指被AOP框架创建的代理对象（因为代理模式并不只用在AOP中）
+
+**织入**：Weaving，指将通知代码插入到目标对象，并生成代理对象的这一过程
+
+## 8.4 基于XML的声明式AspectJ（简答）
+
+## 9.1 Spring JDBC（名词解释）
+
+### 概念
+
+**JdbcTemplate**：数据抽象层的基础，继承自抽象类`JdbcAccessor`，并实现了`JdbcOperations`接口
+- `JdbcAccessor`提供了一些公共属性
+  - `DataSource`：用于获取数据库连接，还可以引入对数据库连接的缓冲池和分布式事务的支持
+  - `SQLExceptionTranslator`：负责对`SQLException`进行转译
+- `JdbcOperations`定义在JdbcTemplate在可以使用的操作集合，包括添加、修改、查询、删除等
+
+**Spring JDBC模块**：主要由四个包组成
+- **core**：核心包，包含JDBC的核心功能——`JdbcTemplate`类、`SimpleJdbcInsert`类、`SimpleJdbcCall`类和`NamedParameterJdbcTemplate`类
+- **dataSource**：数据源包，访问数据源的实用工具类
+- **object**：对象包，以OOP的方式访问数据库，执行查询并将返回结果转为业务对象，在数据库表和业务对象之间建立映射
+- **support**：支持包，包含core包和object的支持类，如提供异常转换功能的SQLException类
+
+## 11.3 Spring MVC的工作流程（简答）
+
+### 简述Spring MVC的工作流程
 1.  用户通过浏览器发送请求，请求会被 Spring MVC 的**前端控制器-DispatcherServlet**接收。
 2.  DispatcherServlet 拦截到请求后，会调用**处理器映射器-HandlerMapping**。
 3.  HandlerMapping根据请求 URL 找到具体的**处理器-Handler** ，生成Handler对象（如果有，还会生成拦截器对象）并返回给 DispatcherServlet 。
@@ -839,3 +1221,37 @@ public interface Formatter<T> extends Printer<T>, Parser<T> {
 在上述执行过程中，DispatcherServlet、HandlerMapping、HandlerAdapter 和 ViewResolver 对象的工作都是在框架内部执行的，开发人员并不需要关心这些对象内部实现过程。
 
 和程序员有关的内容只有 **Handler（即，代码中的 Controller）**，和 ModelAndView 对象
+
+## 11.4 Spring MVC的核心类（名词解释）
+
+### 概念
+
+**DispatcherSerlet**：前端控制器
+
+### DispatcherServlet配置
+
+```XML
+<!--web.xml-->
+<servlet>
+<!--配置前端过滤器-->
+  <servlet-name>springmvc</servlet-name>
+  <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+  <!--初始化时加载配置文件-->
+  <init-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:springmvc-config.xml</param-value>
+  </init-param>
+  <!--表示容器在启动时立即加载Servlet -->
+  <load-on-startup>1</load-on-startup>
+</servlet>
+<servlet-mapping>
+  <servlet-name>springmvc</servlet-name>
+  <ur1-pattern>/</ur1-pattern>
+</servlet-mapping>
+```
+
+## 12.1 数据绑定（名词解释&简答）
+
+## 13.3 拦截器（简答）
+
+## 15.1 整合环境搭建（简答）
