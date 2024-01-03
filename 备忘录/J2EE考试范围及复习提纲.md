@@ -1205,6 +1205,31 @@ Bean的装配方式：XML装配、Annotation装配、自动装配
 
 ## 11.3 Spring MVC的工作流程（简答）
 
+### SpringMVC的特点
+来自章首：
+- 采用MVC设计模式
+- 松耦合可插拔的组件结构
+- 高度的可配置性、扩展性和灵活性
+- 注解驱动
+- RESTful风格的支持
+
+来自11.3.3：
+- MVC之间角色划分清晰
+- Spring生态的一部分，完美兼容Spring家族其他框架
+- 灵活性强，便于和其他框架集成
+- 配置灵活
+- 面向接口编程
+  - 提供了大量控制器接口和实现类，可以使用现成的实现类也可以自己实现
+- 支持多种视图技术
+  - JSP、Velocity、FreeMarker等
+- 支持国际化
+- 提供开发Web应用的完整流程
+- 提供前端控制器DispatcherServlet
+  - 后端开发人员无需顾虑前端请求的接受和转发等问题
+- 数据绑定
+- 内置输入参数校验
+- 基于XML的配置文件，编辑不需要重新编译整个项目
+
 ### 简述Spring MVC的工作流程
 1.  用户通过浏览器发送请求，请求会被 Spring MVC 的**前端控制器-DispatcherServlet**接收。
 2.  DispatcherServlet 拦截到请求后，会调用**处理器映射器-HandlerMapping**。
@@ -1230,13 +1255,6 @@ Bean的装配方式：XML装配、Annotation装配、自动装配
 - Model：负责数据逻辑（业务规则）的处理和实现数据操作——JavaBean
 - View：负责格式化数据并展现给用户，包括数据展示、用户交互、界面设计等——JSP/Html
 - Controller：负责接受并转发Http请求，对请求进行处理后指派视图或将响应结果发送给客户端——Servlet
-
-**SpringMVC的特点**：
-- 采用MVC设计模式
-- 松耦合可插拔的组件结构
-- 高度的可配置性、扩展性和灵活性
-- 注解驱动
-- RESTful风格的支持
 
 **DispatcherSerlet**：前端控制器，负责将前端传来的Http请求分发
 
