@@ -1226,7 +1226,31 @@ Bean的装配方式：XML装配、Annotation装配、自动装配
 
 ### 概念
 
-**DispatcherSerlet**：前端控制器
+**MVC**：Model（模型）、View（视图）和Controller（控制器）
+- Model：负责数据逻辑（业务规则）的处理和实现数据操作——JavaBean
+- View：负责格式化数据并展现给用户，包括数据展示、用户交互、界面设计等——JSP/Html
+- Controller：负责接受并转发Http请求，对请求进行处理后指派视图或将响应结果发送给客户端——Servlet
+
+**SpringMVC的特点**：
+- 采用MVC设计模式
+- 松耦合可插拔的组件结构
+- 高度的可配置性、扩展性和灵活性
+- 注解驱动
+- RESTful风格的支持
+
+**DispatcherSerlet**：前端控制器，负责将前端传来的Http请求分发
+
+**Controller**:控制器，这里特指后端控制器，用于处理特定的Http请求，将请求结果传递给视图以展现HTML，或者将请求结果写入Response响应体中返回给前端（RESTful）
+
+**@RequestMapping**：指示该类/该方法处理的URL请求路径
+- value:URL的相对路径
+- name:映射别名
+- method:指示该类/该方法只处理某种特定方法的请求（GET/POST/DELETE/PUT等）
+- params:指示请求体(HttpRequest)中必须包含某些参数
+- headers:指示请求头(Header)中必须包含某些参数
+- consumes:指示请求头中指定的内容类型（Context-Type）
+- produces:指示请求头中指定的返回类型(Accept)
+- 除`@RequestMapping`外，还可以用`@GetMapping`、`@PostMapping`等注解直接说明该方法处理的请求方法
 
 ### DispatcherServlet配置
 
@@ -1237,11 +1261,12 @@ Bean的装配方式：XML装配、Annotation装配、自动装配
   <servlet-name>springmvc</servlet-name>
   <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
   <!--初始化时加载配置文件-->
+  <!--不配置则默认寻找WEB-INF/[servletName]-servlet.xml-->
   <init-param>
     <param-name>contextConfigLocation</param-name>
     <param-value>classpath:springmvc-config.xml</param-value>
   </init-param>
-  <!--表示容器在启动时立即加载Servlet -->
+  <!--表示容器在启动时立即加载Servlet，默认为0 -->
   <load-on-startup>1</load-on-startup>
 </servlet>
 <servlet-mapping>
@@ -1250,8 +1275,121 @@ Bean的装配方式：XML装配、Annotation装配、自动装配
 </servlet-mapping>
 ```
 
+### Controller 配置
+
+通过`@Controller`注解声明一个类为控制器
+- 也可以通过实现`Controller`接口来声明，但是这种方式已经过时了，且只能处理**一个**请求
+- 要注意的是，不能忘了在配置文件中配置**组件扫描**来将该包下的控制器类注册为Bean
+
+```XML
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmins: context="http://www.springframework.org/schema/context"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+                            http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+                            http://www .springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context-3.2.xsd">
+                        <!--↑这里要记得引入spring-context-->
+  <!--指定需要扫描的包-->
+  <context: component-scan base-package="com.test.controller"/>
+</beans>
+```
+
+通过在**控制器类**或者**控制器方法**上添加`@RequestMapping`指示该类/方法处理的URL请求路径
+- 当在类上标注该注解时，相当于在该类下的所有方法都添加了一级**父级路径**
+
+在控制器的**请求处理方法**中，可以直接将`HttpServletRequest`、`HttpServletResponse`和`HttpSession`三个对象加到方法参数中，Spring会自动处理这三个参数，将对应内容传入方法中
+- 除此之外，还可以传入:`WebRequest`、`Locale`、`TimeZone`、`InputStream/OutputStream`、`HttpMethod`、`Principal`、`HttpEntity`、`ModelMap`(这个在之前的数据绑定也提到过)、`RedirectAttribute`、`BindingResult`、`SessionStatus`、`UriComponentsBuilder`等参数
+
+常见的返回值类型：
+- **ModelAndView**
+  - 添加Model数据，并指定视图
+- Model
+- Map
+- View
+- **String**
+  - 跳转视图（不能携带数据），此时通过**方法参数**的Model参数写入数据，void同理
+  - 在视图名前添加`redirect:`、`forward:`可以将**跳转**操作变更为**重定向**、**转发**
+- **void**
+  - 异步请求，只返回数据，不跳转视图
+- HttpEntity<?>/ResponseEntity<?>
+- Callable<?>
+- DeferredResult<?>
+
 ## 12.1 数据绑定（名词解释&简答）
 
+### 概念
+
+**数据绑定**：SpringMVC通过`DataBinder`将Http请求的参数进行类型转换，并赋值给控制器方法中的参数
+
+### 数据绑定的过程
+
+![1704268984298](image/J2EE考试范围及复习提纲/1704268984298.png)
+
+1. SpringMVC将ServletRequest传递给DataBinder
+2. SpringMVC将请求路径下对应控制器方法的参数对象传递给DataBinder
+3. DataBinder根据**ConversionService**将1中包含的信息转换为2中对象的类型
+4. DataBinder通过**Validator**校验数据的合法性
+5. DataBinder将转换结果封装到**BindingResult**中，SpringMVC将该对象的内容传递给对应的控制器方法
+
 ## 13.3 拦截器（简答）
+
+### 拦截器配置
+
+**实现拦截器**：
+- 实现`HandlerInterceptor`接口
+  - 或者继承实现上述接口的对象，如`HandlerIntercepterAdapter`
+- 实现`WebRequestInterceptor`接口
+  - 或者继承实现上述接口的对象
+
+**HandlerInterceptor接口源码**：
+```Java
+public interface HandlerInterceptor {
+    default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        return true;
+    }
+
+    default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable ModelAndView modelAndView) throws Exception {
+    }
+
+    default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, @Nullable Exception ex) throws Exception {
+    }
+}
+```
+- `preHandle`：在控制器方法前执行
+  - boolean返回值返回**true**表示允许继续执行，**false**表示中断后续操作
+- `postHandle`：在控制器方法执行后，**解析视图**前执行，用于对模型和视图进一步更改
+- `afterCompletion`：视图渲染结束后执行，用于资源清理、记录日志等
+
+在`servlet.xml`（不是web.xml）中注册拦截器：
+```XML
+<!-- 配置用于session验证的拦截器 -->
+<!-- 
+    如果有多个拦截器满足拦截处理的要求，则依据配置的先后顺序来执行
+ -->
+<mvc:interceptors>
+    <!--全局拦截器-->
+    <bean class="com.test.GlobalIntercepter" />
+    <mvc:interceptor>
+        <!-- 拦截所有的请求，这个必须写在前面，也就是写在【不拦截】的上面 -->
+        <mvc:mapping path="/**" />
+        <!-- 但是排除下面这些，也就是不拦截请求 -->
+        <mvc:exclude-mapping path="/login.html" />
+        <mvc:exclude-mapping path="/account/login.do" />
+        <mvc:exclude-mapping path="/account/regist.do" />
+        <!-- 拦截器java代码路径 -->
+        <bean class="com.test.LogsInterceptor" />
+    </mvc:interceptor>
+</mvc:interceptors>
+```
+
+### 拦截器执行流程
+
+**单个拦截器的执行流程**：
+![1704270467259](image/J2EE考试范围及复习提纲/1704270467259.png)
+
+**多个拦截器的执行流程**：
+![1704270479604](image/J2EE考试范围及复习提纲/1704270479604.png)
 
 ## 15.1 整合环境搭建（简答）
