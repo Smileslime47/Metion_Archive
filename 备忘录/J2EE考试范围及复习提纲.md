@@ -28,7 +28,7 @@
 
 ### 1. [√]MyBatis框架是一种ORM框架，ORM框架即为对象关系映射框架。
 
-### 2. [x]MyBatis映射文件中<mappers>元素是配置文件的根元素，它包含一个namespace属性，该属性为这个<mappers>指定了唯一的命名空间。
+### 2. [x]MyBatis映射文件中`<mappers>`元素是配置文件的根元素，它包含一个namespace属性，该属性为这个`<mappers>`指定了唯一的命名空间。
 - 配置文件的根元素是`<configuration>`，映射文件的根元素是`<mapper>`
 - namespace字段是`<mapper>`的属性而不是`<mappers>`的
 
@@ -40,7 +40,7 @@
 ### 5. 有关MyBatis工作原理说法错误的是
 - A.[√]MyBatis的全局配置文件配置了MyBatis的运行环境等信息，其中主要内容是获取数据库连接。
 - B.[√]MyBatis映射文件中配置了操作数据库的SQL语句，需要在MyBatis的全局配置文件中加载才能执行。
-  - 映射文件指的是mapper.xml，需要在全局配置的<mappers>中注册
+  - 映射文件指的是mapper.xml，需要在全局配置的`<mappers>`中注册
 - C.[x]可以通过MyBatis的环境等配置信息构建会话对象SqlSession。
   - 通过MyBatis的环境等配置信息构建**SqlSessionFactory**
 - D.[√]SqlSession对象，该对象中包含了执行SQL的所有方法。
@@ -54,13 +54,13 @@
   - Mybatis(重点)的xml中的**concat函数**可以防止SQL注入
 - D.[√]使用MySQL中的concat()函数进行字符串拼接，导致数据库移植性变差。
 
-###  7. 以下有关<sql>元素说法错误的是
-- A.[√]<sql>元素的作用就是定义可重用的SQL代码片段，然后在其他语句中引用这—代码片段。
-- B.[√]使用<include>元素的refid属性可以引用自定义的代码片段。
+###  7. 以下有关`<sql>`元素说法错误的是
+- A.[√]`<sql>`元素的作用就是定义可重用的SQL代码片段，然后在其他语句中引用这—代码片段。
+- B.[√]使用`<include>`元素的refid属性可以引用自定义的代码片段。
   - 在查询语句的外侧定义sql，然后可以在查询语句内测通过include引用sql	
-- C.[x]使用<include>元素refid的属性值为自定义代码片段的name.
+- C.[x]使用`<include>`元素refid的属性值为自定义代码片段的name.
   - 属性值应当为自定义片段的**id**(见下例)
-- D.[√]<sql>元素是<mapper>元素的子元素。
+- D.[√]`<sql>`元素是`<mapper>`元素的子元素。
 
 **7例：**
 ```xml
@@ -89,10 +89,10 @@
   - 可以使用 resultType 或 resultMap，但不能同时使用。
   - resultTyoe是`<select>`的一个属性，即`<select resultType="...">`，而resultMap是和`<select>`并列的一个元素，即`<resultMap>...</resultMap><select>...</select>`(具体使用可以见下例)
   - resultType用于返回数据的字段和POJO类的名称严格一一对应时，指明返回数据的POJO类型，不需要多余的属性
-  - resultMap用于名称不严格一一对应时，还能在子元素中用<result>额外地指定POJO变量名和数据字段的绑定关系（如`<result property="id" column="uid"></result>`）	
+  - resultMap用于名称不严格一一对应时，还能在子元素中用`<result>`额外地指定POJO变量名和数据字段的绑定关系（如`<result property="id" column="uid"></result>`）	
 - D.[√]在同一个映射文件中可以配置多个`<select>`元素
 
-### 9.以下不属于<foreach>元素中使用的属性的是
+### 9.以下不属于`<foreach>`元素中使用的属性的是
 - A.[√]separator
   - 迭代后返回的元素之间的分隔符，默认是" , "
 - B.[√]collection
@@ -125,7 +125,7 @@
 - **嵌套结果**：手写多表查询（JOIN），缺点就是写出来的SQL语句会很复杂，但是优点是只有一次查询，性能好
 
 **2嵌套查询例：**
-可以看到SELECT语句较简单，但是resultMap的<collection>子元素中指定了额外的select操作，当返回结果集时，对于每个集合中的元素都需要单独执行一次查询
+可以看到SELECT语句较简单，但是resultMap的`<collection>`子元素中指定了额外的select操作，当返回结果集时，对于每个集合中的元素都需要单独执行一次查询
 ```xml
 <resultMap id="queryStudentAndCourseMap" type="student">
     <id property="stId" column="st_id"/>
