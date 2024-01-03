@@ -53,6 +53,7 @@
 - C.[x]使用MySQL中的concat()函数进行字符串拼接，也无法防止SQL注入。
   - Mybatis(重点)的xml中的**concat函数**可以防止SQL注入
 - D.[√]使用MySQL中的concat()函数进行字符串拼接，导致数据库移植性变差。
+  - 见下文中`bind`用法，`concat()`函数只适用于**MySQL**，而`bind`可以兼容`Oracle`、`Postgre`等数据库
 
 ###  7. 以下有关`<sql>`元素说法错误的是
 - A.[√]`<sql>`元素的作用就是定义可重用的SQL代码片段，然后在其他语句中引用这—代码片段。
