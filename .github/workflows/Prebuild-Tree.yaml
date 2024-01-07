@@ -26,3 +26,10 @@ jobs:
       - name: Run
         run:
           ts-node ./prebuild-tree.ts ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit
+        run: |
+          git config --global user.name 'Smileslime47'
+          git config --global user.email 'Smile_slime_47@outlook.com'
+          git commit -am "Prebuild Archive Tree Commit"
+          git push
