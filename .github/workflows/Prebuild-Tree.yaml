@@ -31,5 +31,6 @@ jobs:
         run: |
           git config --global user.name 'Smileslime47'
           git config --global user.email 'Smile_slime_47@outlook.com'
+          git add ./archive.tree
           git commit -am "Prebuild Archive Tree Commit"
           git push
