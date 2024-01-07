@@ -1,6 +1,7 @@
 let msgpack = require('./msgpack.min.js');
-let { env } = require('node:process');
 let fs = require('fs')
+let token = process.argv[2]
+let fileTree: Array<GitSimpleResponse> = []
 
 interface GitSimpleResponse {
     name: string,        //内容名
@@ -46,6 +47,7 @@ const createSubtree = async (parent: GitSimpleResponse) => {
         method: 'GET',
         headers: {
             Accept: 'application/json',
+            Authorization:token
         },
     }).then((response) => response.json()).then(async (json) => {
         let contents = json as Array<GithubResponse>
@@ -58,13 +60,14 @@ const createSubtree = async (parent: GitSimpleResponse) => {
     })
 }
 
-let fileTree: Array<GitSimpleResponse> = []
+console.log("Token:"+token)
 
 //获取root目录信息
 fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
     method: 'GET',
     headers: {
         Accept: 'application/json',
+        Authorization:token
     },
 }).then((response) => {
     if (!response.ok) {
@@ -86,10 +89,10 @@ fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
     //     console.log(content.contents)
     // })
     // console.log(msgpack.serialize(fileTree))
-    let test = msgpack.deserialize(msgpack.serialize(fileTree))
-    test.forEach((content: GitSimpleResponse, _: any) => {
-        console.log(content.contents)
-    })
+    // let test = msgpack.deserialize(msgpack.serialize(fileTree))
+    // test.forEach((content: GitSimpleResponse, _: any) => {
+    //     console.log(content.contents)
+    // })
     fs.writeFile('./archive.tree',msgpack.serialize(fileTree),(err: any)=>{
         if(err){
             console.log("Write Failed")
@@ -97,7 +100,6 @@ fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
             console.log("Write Success")
         }
     })
-    console.log(env.github_token)
 })
 
 

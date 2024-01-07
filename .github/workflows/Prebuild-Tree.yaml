@@ -21,9 +21,8 @@ jobs:
       - name: Install Ts-Node
         run: 
           npm install ts-node -g
+          npm install @types/node -g
 
       - name: Run
         run:
-          ts-node ./prebuild-tree.ts
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          ts-node ./prebuild-tree.ts ${{ secrets.GITHUB_TOKEN }}
