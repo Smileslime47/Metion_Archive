@@ -1,0 +1,29 @@
+name: Preebuild-Tree
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # pull the code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # install node
+      - name: Install Node
+        uses: actions/setup-node@v3
+        
+      - name: Install Ts-Node
+        run: 
+          npm install ts-node -g
+
+      - name: Run
+        run:
+          ts-node ./prebuild-tree.ts
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
