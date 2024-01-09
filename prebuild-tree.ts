@@ -43,31 +43,34 @@ const createSubtree = async (parent: GitSimpleResponse) => {
     if (parent.type === "file") return
 
     parent.contents = []
-    await fetch(parent.url, {
-        method: 'GET',
-        headers: {
-            Accept: 'application/json',
-            Authorization:token
-        },
-    }).then((response) => response.json()).then(async (json) => {
-        let contents = json as Array<GithubResponse>
-        for await (const content of contents) {
-            parent.contents.push(simplify(content))
-            if (content.type === "dir") {
-                await createSubtree(content)
-            }
+    await fetch(
+        parent.url,
+        {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json',
+                Authorization: token
         }
-    })
+        }).then((response) => response.json()).then(async (json) => {
+            let contents = json as Array<GithubResponse>
+            for await (const content of contents) {
+                let simplifiedContent = simplify(content)
+                parent.contents.push(simplifiedContent)
+                if (content.type === "dir") {
+                    await createSubtree(simplifiedContent)
+                }
+            }
+        })
 }
 
-console.log("Token:"+token)
+console.log("Token:" + token)
 
 //获取root目录信息
 fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
     method: 'GET',
     headers: {
         Accept: 'application/json',
-        Authorization:token
+        Authorization: token
     },
 }).then((response) => {
     if (!response.ok) {
@@ -93,10 +96,11 @@ fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
     // test.forEach((content: GitSimpleResponse, _: any) => {
     //     console.log(content.contents)
     // })
-    fs.writeFile('./archive.tree',msgpack.serialize(fileTree),(err: any)=>{
-        if(err){
+    console.log(msgpack.serialize(fileTree) as Uint8Array)
+    fs.writeFile('./archive.tree', msgpack.serialize(fileTree) as Uint8Array, (err: any) => {
+        if (err) {
             console.log("Write Failed")
-        }else{
+        } else {
             console.log("Write Success")
         }
     })
