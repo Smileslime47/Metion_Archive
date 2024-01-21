@@ -1,3 +1,4 @@
+# .github/workflows/Prebuild-Tree.yaml
 name: Preebuild-Tree
 
 on:
@@ -10,23 +11,26 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # pull the code
+      # 将仓库拉取到本地
       - name: Checkout
         uses: actions/checkout@v3
 
-      # install node
+      # 安装npm
       - name: Install Node
         uses: actions/setup-node@v3
-        
+
+      # 安装用于执行单文件TS脚本的NPM库  
       - name: Install Ts-Node
         run: 
           npm install ts-node -g
           npm install @types/node -g
 
+      # 执行脚本
       - name: Run
         run:
           ts-node ./prebuild-tree.ts ${{ secrets.GITHUB_TOKEN }}
 
+      # 将构件推送至仓库
       - name: Commit
         run: |
           git config --global user.name 'Smileslime47'

@@ -1,3 +1,4 @@
+//prebuild-tree.ts
 let msgpack = require('./msgpack.min.js');
 let fs = require('fs')
 let token = process.argv[2]
@@ -27,6 +28,7 @@ interface GithubResponse {
     contents: Array<GithubResponse>
 }
 
+//将完整的Github相应转化为简化对象
 const simplify = (response: GithubResponse) => {
     return {
         name: response.name,
@@ -39,6 +41,7 @@ const simplify = (response: GithubResponse) => {
     } as GitSimpleResponse
 }
 
+//以当前节点为根节点，递归生成子节点
 const createSubtree = async (parent: GitSimpleResponse) => {
     if (parent.type === "file") return
 
@@ -79,23 +82,17 @@ fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
     return response.json()
 }).then(async (json) => {
     let contents = json as Array<GithubResponse>
+    //获取最外层节点
     contents.forEach((content: GithubResponse, _: any) => {
         fileTree.push(simplify(content))
     })
 
-
+    //对最外层节点进行递归，生成子节点
     await Promise.all(fileTree.map(async (content) => {
         await createSubtree(content)
     }))
 
-    // fileTree.forEach((content: GitSimpleResponse, _: any) => {
-    //     console.log(content.contents)
-    // })
-    // console.log(msgpack.serialize(fileTree))
-    // let test = msgpack.deserialize(msgpack.serialize(fileTree))
-    // test.forEach((content: GitSimpleResponse, _: any) => {
-    //     console.log(content.contents)
-    // })
+    //生成msgpack二进制流并写入文件
     console.log(msgpack.serialize(fileTree) as Uint8Array)
     fs.writeFile('./archive.tree', msgpack.serialize(fileTree) as Uint8Array, (err: any) => {
         if (err) {
@@ -105,5 +102,3 @@ fetch("https://api.github.com/repos/Smileslime47/Metion_Archive/contents", {
         }
     })
 })
-
-
